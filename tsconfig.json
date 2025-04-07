@@ -1,25 +1,33 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "incremental": true,
-    "target": "es2022",
-    "module": "Node16",
+    "allowJs": true,
+    "checkJs": true,
     "declaration": true,
-    "sourceMap": true,
-    "outDir": "./lib",
-
-    /* Strict Type-Checking Options */
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "incremental": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
     "strict": true,
-
-    /* Additional Checks */
+    "sourceMap": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
+    "allowUnreachableCode": false,
+    "forceConsistentCasingInFileNames": true,
+    "noErrorTruncation": true,
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "outDir": "./dist",
 
-    "moduleResolution": "Node16",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "moduleResolution": "node16",
+    "module": "Node16",
+    "target": "es2022",
   },
   "include": ["src/"],
-  "compileOnSave": false
 }
