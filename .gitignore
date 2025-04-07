@@ -4,4 +4,7 @@ npm-debug.log
 !mock-cert.pem
 .env
 coverage
-lib
+dist
+
+# log folder to store any logs temporarily
+.logs
