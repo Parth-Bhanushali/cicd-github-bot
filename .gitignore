@@ -8,3 +8,6 @@ dist
 
 # log folder to store any logs temporarily
 .logs
+
+# references or notes handy during development
+refs.txt
