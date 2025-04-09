@@ -11,6 +11,11 @@ export function wasCommentGeneratedByBot(login: string | undefined): boolean {
   return login === `${botName}[bot]`;
 }
 
+export function checkWorkflowName(path: string = '', workflowName: string) {
+  const split = path.split('/');
+  return split[split.length - 1] === workflowName;
+}
+
 /** 
  * A function to log any objects to a log file
  */ 

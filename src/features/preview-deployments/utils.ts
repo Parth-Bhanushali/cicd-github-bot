@@ -47,7 +47,7 @@ export function generateDeploymentTable(apps: AppStatusLine[]) {
   apps.forEach((app, index) => {
     const numberColumnData = index + 1;
     const appNameColumnData = app.name;
-    
+
     let previewLinksColumnData;
     if (typeof app.previewLink === 'object') {
       previewLinksColumnData = app.previewLink.map(link => `[Preview deployment](${link})`).join(' ');
@@ -95,88 +95,81 @@ export function parseDeploymentTable(markdown: string): AppStatusLine[] {
   return apps;
 }
 
-export async function parseAppLinesFromWorkflowRuns (
+export async function parseAppLinesFromWorkflowRun(
   context: Context<'workflow_run.in_progress'> | Context<'workflow_run.completed'>,
   existingAppLines: AppStatusLine[],
 ): Promise<AppStatusLine[]> {
   const repo = context.payload.repository;
-  const workflowRuns = await context.octokit.actions.listWorkflowRunsForRepo({
-    owner: repo.owner.login,
-    repo: repo.name,
-    per_page: 2 // NOTE: independent workflow runs occurring on each pull request
-  })
-
+  const workflowRun = context.payload.workflow_run;
   const appLines: AppStatusLine[] = [...existingAppLines];
 
-  for (const run of workflowRuns.data.workflow_runs) {
-    const jobs = await context.octokit.actions.listJobsForWorkflowRun({
-      owner: repo.owner.login,
-      repo: repo.name,
-      run_id: run.id,
-    });
+  const jobs = await context.octokit.actions.listJobsForWorkflowRun({
+    owner: repo.owner.login,
+    repo: repo.name,
+    run_id: workflowRun.id,
+  });
 
-    for (const job of jobs.data.jobs) {
-      let pattern = /^Deploy (\S+)/;
-      const match = job.name.match(pattern);
-      let previewLink: string | string[] = '#';
-      
-      if (match) {
-        const appName = match[1];
-        let status: AppStatus | null;
-        switch (job.conclusion) {
-          case 'success':
-            status = AppStatus.SUCCESS
-            break;
-          case 'failure':
-          case 'action_required':
-          case 'timed_out':
-            status = AppStatus.FAILED
-            break;
-          case 'skipped':
-            status = AppStatus.SKIPPED
-            break;
-          case 'cancelled':
-            status = AppStatus.CANCELLED
-            break;
-          case 'neutral':
-            status = AppStatus.NEUTRAL
-            break;
-          default:
-            status = AppStatus.IN_PROGRESS;
-        }
+  for (const job of jobs.data.jobs) {
+    let pattern = /^Deploy (\S+)/;
+    const match = job.name.match(pattern);
+    let previewLink: string | string[] = '#';
 
-        if (status === AppStatus.SKIPPED) {
-          continue;
-        } else if (status === AppStatus.SUCCESS) {
-          const jobLogsData = await context.octokit.actions.downloadJobLogsForWorkflowRun({
-            owner: repo.owner.login,
-            repo: repo.name,
-            job_id: job.id
-          })
-          const logs = jobLogsData.data;
-          if (typeof logs === 'string') {
-            previewLink = parsePreviewLinksFromLogs(logs);
-          }
+    if (match) {
+      const appName = match[1];
+      let status: AppStatus | null;
+      switch (job.conclusion) {
+        case 'success':
+          status = AppStatus.SUCCESS
+          break;
+        case 'failure':
+        case 'action_required':
+        case 'timed_out':
+          status = AppStatus.FAILED
+          break;
+        case 'skipped':
+          status = AppStatus.SKIPPED
+          break;
+        case 'cancelled':
+          status = AppStatus.CANCELLED
+          break;
+        case 'neutral':
+          status = AppStatus.NEUTRAL
+          break;
+        default:
+          status = AppStatus.IN_PROGRESS;
+      }
+
+      if (status === AppStatus.SKIPPED) {
+        continue;
+      } else if (status === AppStatus.SUCCESS) {
+        const jobLogsData = await context.octokit.actions.downloadJobLogsForWorkflowRun({
+          owner: repo.owner.login,
+          repo: repo.name,
+          job_id: job.id
+        })
+        const logs = jobLogsData.data;
+        if (typeof logs === 'string') {
+          previewLink = parsePreviewLinksFromLogs(logs);
         }
-        
-        let appLine = existingAppLines.find(line => line.name === appName);
-        const jobUrl = job.html_url ?? '#';
-        const updatedAt = new Date().toISOString();
-        if (!appLine) {
-          appLine = {
-            name: appName,
-            status,
-            updatedAt,
-            jobUrl,
-            previewLink,
-          }
-          appLines.push(appLine);
-        } else {
-          appLine.status = status;
-          appLine.updatedAt = updatedAt;
-          appLine.jobUrl = jobUrl;
-          appLine.previewLink = previewLink;
+      }
+
+      let appLine = existingAppLines.find(line => line.name === appName);
+      const jobUrl = job.html_url ?? '#';
+      const updatedAt = new Date().toISOString();
+      if (!appLine) {
+        appLine = {
+          name: appName,
+          status,
+          updatedAt,
+          jobUrl,
+          previewLink,
         }
+        appLines.push(appLine);
+      } else {
+        appLine.status = status;
+        appLine.updatedAt = updatedAt;
+        appLine.jobUrl = jobUrl;
+        appLine.previewLink = previewLink;
       }
     }
   }

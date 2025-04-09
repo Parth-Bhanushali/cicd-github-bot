@@ -1,6 +1,6 @@
 import type { Context } from 'probot';
-import { parseDeploymentTable, parseAppLinesFromWorkflowRuns, generateDeploymentTable } from './utils.js';
-import { commentContainsDeploymentTable, wasCommentGeneratedByBot } from '../../lib/common.js';
+import { parseDeploymentTable, parseAppLinesFromWorkflowRun, generateDeploymentTable } from './utils.js';
+import { checkWorkflowName, commentContainsDeploymentTable, wasCommentGeneratedByBot } from '../../lib/common.js';
 
 /**
  * This function displays a table summarizing the applications deployed
@@ -19,6 +19,13 @@ export async function handlePreviewDeploymentsEvent(
     return;
   }
 
+  const workflowRun = context.payload.workflow_run;
+  const isCDWorkflow = checkWorkflowName(workflowRun.path, 'cd.yml');
+
+  if (!isCDWorkflow) {
+    return;
+  }
+
   const comments = await context.octokit.issues.listComments({
     owner: repo.owner.login,
     repo: repo.name,
@@ -33,7 +40,7 @@ export async function handlePreviewDeploymentsEvent(
   if (botComment?.body) {
     // Update the table
     const existingAppLines = parseDeploymentTable(botComment.body);
-    const updatedAppLines = await parseAppLinesFromWorkflowRuns(context, existingAppLines);
+    const updatedAppLines = await parseAppLinesFromWorkflowRun(context, existingAppLines);
     const body = generateDeploymentTable(updatedAppLines);
 
     await context.octokit.issues.updateComment({
@@ -44,7 +51,7 @@ export async function handlePreviewDeploymentsEvent(
     })
   } else {
     // Create new table
-    const appLines = await parseAppLinesFromWorkflowRuns(context, []);
+    const appLines = await parseAppLinesFromWorkflowRun(context, []);
 
     if (appLines.length > 0) {
       const body = generateDeploymentTable(appLines);
